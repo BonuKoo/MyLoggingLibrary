@@ -1,5 +1,5 @@
 
-# mylogger-spring-boot-starter
+# mylogger-spring-boot
 
 REST API 응답을 **2XX / 3XX / 4XX / 5XX 로 분류해서 기록**하고, 그대로 **ELK 로 보내는** 스프링 부트 스타터.
 
