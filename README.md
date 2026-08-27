@@ -1,14 +1,3 @@
-> # ⚠️ 사용 중단 (2026-08-27)
->
-> 이 프로젝트는 **`F:\Project\movedFromC\logger` (`com.lama:logger`) 로 대체되었습니다.**
-> 두 프로젝트는 기능과 대상 Spring Boot 버전(3.0~3.4)이 완전히 동일하며, 차이는 빌드 도구(Maven vs Gradle)뿐입니다.
-> 중복 유지보수를 피하기 위해 Gradle 쪽을 정본으로 삼았습니다.
->
-> - 새로 붙이는 프로젝트는 `com.lama:logger:0.0.1-SNAPSHOT` 을 쓰세요.
-> - 이 프로젝트를 참조하던 `shorten-url-for-logging-end-of-chapter-4` 는 이미 전환했습니다.
-> - 아래 내용은 기록용으로 남겨둡니다.
-
----
 
 # mylogger-spring-boot-starter
 
