@@ -1,0 +1,25 @@
+{
+  "index_patterns": ["application-logs-*"],
+  "priority": 200,
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp":  { "type": "date" },
+        "app_name":    { "type": "keyword" },
+        "log_type":    { "type": "keyword" },
+        "level":       { "type": "keyword" },
+        "level_value": { "type": "integer" },
+        "logger_name": { "type": "keyword" },
+        "thread_name": { "type": "keyword" },
+        "request_id":  { "type": "keyword" },
+        "message":     { "type": "text" },
+        "stack_trace": { "type": "text" },
+        "tags":        { "type": "keyword" }
+      }
+    }
+  }
+}

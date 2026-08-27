@@ -1,0 +1,69 @@
+# 로그 수집용 ELK 스택 (개발/학습용 구성. 보안 기능은 꺼져 있다.)
+#
+#   docker compose up -d      # 세 개 한 번에 띄우기
+#   docker compose ps         # 상태 확인
+#   docker compose logs -f logstash
+#   docker compose down       # 내리기 (데이터는 볼륨에 남는다)
+#
+# 애플리케이션은 localhost:5044 로 로그를 보내고, Kibana 는 http://localhost:5601 로 접속한다.
+#
+# 이미지 태그는 이 PC 에 이미 받아져 있는 버전(8.10.x)에 맞춰 두었다.
+# 올리고 싶다면 세 개를 같은 마이너 버전으로 함께 올려야 한다.
+
+services:
+  # ── 저장소 ────────────────────────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+    environment:
+      # 클러스터를 구성하지 않는 1대 모드. 이게 없으면 부팅 중 다른 노드를 찾다가 멈춘다.
+      - discovery.type=single-node
+      # 학습용이라 인증/TLS 를 끈다. 켜면 Logstash·Kibana 쪽에도 인증 설정이 필요하다.
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      # 기본값은 호스트 메모리의 절반을 잡는다. 개발 PC 에서는 고정해 두는 편이 안전하다.
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      # 이게 없으면 컨테이너를 지우는 순간 쌓아둔 인덱스가 전부 사라진다.
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      # Logstash/Kibana 가 "언제" 붙어도 되는지 판단하는 기준.
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  # ── 수집/가공 ─────────────────────────────────────────────
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.10.0
+    environment:
+      # logstash.conf 안의 ${ELASTICSEARCH_HOSTS} 로 치환된다.
+      # elasticsearch 는 compose 가 만들어 주는 네트워크 안의 서비스 이름이다.
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m
+      - xpack.monitoring.enabled=false
+    ports:
+      # Logback 의 LogstashTcpSocketAppender 가 붙는 포트
+      - "5044:5044"
+    volumes:
+      # 파이프라인 설정을 통째로 바꿔 끼운다. 수정 후에는 컨테이너를 재시작해야 반영된다.
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    depends_on:
+      elasticsearch:
+        # 단순히 "먼저 뜬 것"이 아니라 "쓸 수 있는 상태"가 될 때까지 기다린다.
+        condition: service_healthy
+
+  # ── 조회/시각화 ───────────────────────────────────────────
+  kibana:
+    image: kibana:8.10.1
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+volumes:
+  elasticsearch-data:

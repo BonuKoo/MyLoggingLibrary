@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    이 스타터가 제공하는 Appender 모음.
+
+    쓰는 쪽 logback.xml 에서 한 줄로 가져간다.
+
+        <include resource="logback-api-access.xml"/>
+
+    라이브러리가 로그 출력을 통째로 강제하면 쓰는 쪽이 통제권을 잃으므로,
+    여기서는 API_ACCESS 로거만 설정하고 root 로거는 건드리지 않는다.
+
+    아래 값들은 include 하기 "전에" <property> 로 정의하면 덮어쓸 수 있다.
+      API_LOG_APP_NAME             앱 이름 (기본 application)
+      API_LOG_DIR                  로그 파일 디렉터리 (기본 logs)
+      API_LOG_LOGSTASH_DESTINATION Logstash 주소 (기본 localhost:5044)
+-->
+<included>
+
+    <property name="API_LOG_APP_NAME" value="${API_LOG_APP_NAME:-application}"/>
+    <property name="API_LOG_DIR" value="${API_LOG_DIR:-logs}"/>
+    <property name="API_LOG_LOGSTASH_DESTINATION" value="${API_LOG_LOGSTASH_DESTINATION:-localhost:5044}"/>
+
+    <!-- 메시지 자체가 이미 정렬된 한 줄이라 앞부분을 짧게 유지한다. -->
+    <property name="API_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %msg%n"/>
+
+    <appender name="API_ACCESS_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${API_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 사람이 tail -f 로 읽는 전체 요청 기록 -->
+    <appender name="API_ACCESS_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${API_LOG_DIR}/api-access.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${API_LOG_DIR}/api-access.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${API_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 4XX(WARN) / 5XX(ERROR) 만 따로 모아두는 파일 -->
+    <appender name="API_ACCESS_ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
+        <file>${API_LOG_DIR}/api-error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${API_LOG_DIR}/api-error.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${API_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 접근 로그 -> api-access-logs-* 인덱스 -->
+    <appender name="API_ACCESS_LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>${API_LOG_LOGSTASH_DESTINATION}</destination>
+        <reconnectionDelay>10 seconds</reconnectionDelay>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app_name":"${API_LOG_APP_NAME}","log_type":"api_access"}</customFields>
+            <!-- request_id 는 StructuredArguments 로 이미 나가므로 MDC 는 중복 전송하지 않는다. -->
+            <includeMdc>false</includeMdc>
+        </encoder>
+    </appender>
+
+    <!--
+        일반 애플리케이션 로그를 함께 보내고 싶을 때 쓰는 Appender.
+        여기서는 정의만 해두고 붙이지 않는다. 쓰는 쪽 root 로거에 직접 걸면 된다.
+
+            <root level="info">
+                <appender-ref ref="APPLICATION_LOGSTASH"/>
+            </root>
+    -->
+    <appender name="APPLICATION_LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>${API_LOG_LOGSTASH_DESTINATION}</destination>
+        <reconnectionDelay>10 seconds</reconnectionDelay>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app_name":"${API_LOG_APP_NAME}","log_type":"application"}</customFields>
+        </encoder>
+    </appender>
+
+    <!-- 접근 로그 전용 로거. additivity 를 끊어 애플리케이션 로그와 섞이지 않게 한다. -->
+    <logger name="API_ACCESS" level="INFO" additivity="false">
+        <appender-ref ref="API_ACCESS_CONSOLE"/>
+        <appender-ref ref="API_ACCESS_FILE"/>
+        <appender-ref ref="API_ACCESS_ERROR_FILE"/>
+        <appender-ref ref="API_ACCESS_LOGSTASH"/>
+    </logger>
+
+</included>

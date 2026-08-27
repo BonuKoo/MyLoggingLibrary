@@ -1,0 +1,38 @@
+{
+  "index_patterns": ["api-access-logs-*"],
+  "priority": 200,
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp":      { "type": "date" },
+        "app_name":        { "type": "keyword" },
+        "log_type":        { "type": "keyword" },
+        "event":           { "type": "keyword" },
+        "level":           { "type": "keyword" },
+        "level_value":     { "type": "integer" },
+        "logger_name":     { "type": "keyword" },
+        "thread_name":     { "type": "keyword" },
+        "request_id":      { "type": "keyword" },
+        "http_method":     { "type": "keyword" },
+        "uri":             { "type": "keyword" },
+        "handler":         { "type": "keyword" },
+        "http_status":     { "type": "integer" },
+        "status_class":    { "type": "keyword" },
+        "status_category": { "type": "keyword" },
+        "status_label":    { "type": "keyword" },
+        "status_reason":   { "type": "keyword" },
+        "duration_ms":     { "type": "long" },
+        "client_ip":       { "type": "keyword" },
+        "message":         { "type": "text" },
+        "request_body":    { "type": "text" },
+        "response_body":   { "type": "text" },
+        "error_message":   { "type": "text" },
+        "tags":            { "type": "keyword" }
+      }
+    }
+  }
+}
